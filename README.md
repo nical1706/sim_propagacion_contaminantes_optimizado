@@ -1,6 +1,6 @@
 # SIMULADOR DE PROPAGACIÓN DE CONTAMINANTES ACELERADO POR C Y OPENMP
 
-Con el objetivo de acelerar el simulador de propagación de contaminantes del proyecto SAINEVRA, se ha realizado en forma de Trabajo de Fin de Grado la siguiente implementación. Esta permite ejecutar una versión optimizada en C desde un entorno Python estándar por medio de librerías compartidas de Linux, las cuales se pueden (y deben) compilar específicamente para la arquitectura de la máquina a usar para optimizar el programa a nivel nativo.
+Con el objetivo de acelerar el simulador de propagación de contaminantes del proyecto SAINEVRA, se ha realizado en forma de Trabajo de Fin de Grado la siguiente implementación. Esta permite ejecutar una versión optimizada en C desde un entorno Python estándar por medio de librerías compartidas de Linux, las cuales se pueden (y deben) compilar específicamente para la arquitectura de la máquina a usar para optimizar el programa a nivel nativo. Se adjunta la memoria para más detalles del proyecto como el archivo "TFG.pdf".
 
 
 ## Información académica (Datos del TFG)
@@ -13,6 +13,7 @@ Con el objetivo de acelerar el simulador de propagación de contaminantes del pr
 * **Universidad:** Universidad de Sevilla.
 * **Grado:** Grado en Ingeniería Informática, Tecnología Informática.
 * **Convocatoria / Fecha:** Junio de 2026.
+* **Enlace a proyecto SAINEVRA:** https://grupo.us.es/sainevra/index.html
 
 
 ## Estructura
@@ -76,7 +77,7 @@ make build_c
 Una vez hecho eso, se generará un archivo .so correspondiente al módulo del simulador, el cual deberá ser movido a la carpeta donde se quiera usar.
 
 ### Inicializado en Python
-Para usar desde Python, primero se ha de importar el módulo del simulador ya compilado (el posible que el editor de código avise de que no se encuentra el módulo, pero es normal). En caso de importa el módulo sin OpenMP:
+Para usar desde Python, primero se ha de importar el módulo del simulador ya compilado (es posible que el editor de código avise de que no se encuentra el módulo, pero es normal). En caso de importar el módulo sin OpenMP:
 
 ```python
 import simulator_core_no_omp
@@ -88,7 +89,58 @@ Para el módulo con OpenMP:
 import simulator_core_omp
 ```
 
-Una vez hecho esto, se han de inicializar las estructuras de datos usadas en C. Para ellos, tras inicializar los valores correspondientes al simulador, se deben inicializar los siguientes 2 objetos (recordar usar el nombre del módulo que se esté usando):
+A cuntinuación, se deben de inicializar los parámetros y las estructuras de entradas del simulador, para ello, se declaran las siguientes variables en Python para los parámetros numéricos (valores de ejemplo, el usuario puede modificarlos a su gusto):
+
+```python
+car_types = [0, 1, 2] # 0 = EV, 1 = Petrol, 2 = Diesel
+pollutants = ['CO2', 'NOx']#['CO2', 'NOx', 'VOC', 'PMexhaust', 'PMexhaustprueba', 'PMnonexhaust25', 'PMnonexhaust10']
+gamma = 0.01
+delta = 0.1
+corner_factor = 1
+WN = -0.2
+WE = 0.4
+width, height, times = 1000, 1000, 200
+num_car_types, num_pollutants = len(car_types), len(pollutants)
+num_tensors = num_car_types * num_pollutants
+```
+
+En cuanto a las estructuras, primero se tiene la estructura de datos "acc", la cual almacena qué casillas tienen edificios (con valor 0) y viceversa (con valor 1):
+
+```python
+#Inicializado acc
+acc = np.zeros((width+2, height+2), dtype=np.float32, order='C')
+
+#Datos de ejemplo, modificar con los que se desee
+template = np.zeros(100, dtype=np.float32)
+template[0:4] = 1
+template[96:100] = 1
+template[48:52] = 1
+template[25:27] = 1
+template[73:75] = 1
+pattern_w = np.tile(template, int(np.ceil(width / 100)))[:width]
+pattern_h = np.tile(template, int(np.ceil(height / 100)))[:height]
+row_mask = np.zeros(width + 2, dtype=bool)
+row_mask[1:-1] = (pattern_w == 1)
+col_mask = np.zeros(height + 2, dtype=bool)
+col_mask[1:-1] = (pattern_h == 1)
+acc[row_mask == 1, :] = 1
+acc[:, col_mask == 1] = 1
+```
+
+De segundo se tiene el diccionario de tensores "G", que almacena los puntos iniciales de contaminación de la simulación:
+
+```python
+#Inicializado G
+G = {f"{cartype}_{pollutant}": np.zeros((width+2, height+2, times+1), dtype=np.float32)
+				for cartype in car_types
+				for pollutant in pollutants}
+
+#Datos de ejemplo, modificar con los que se desee
+for key in G:
+	G[key][:int(width/1.2),:int(height/1.2),:int(times/1.2)]=100
+```
+
+Una vez hecho esto, se han de inicializar las estructuras de datos en C. Para ello, tras inicializar los valores correspondientes al simulador, se deben inicializar los siguientes 2 objetos (se recuerda usar el nombre del módulo que se haya importado):
 
 ```python
 sim_data = simulator_core.SimulationData(
@@ -126,3 +178,12 @@ La segunda  retorna el histórico de toda la simulación:
 ```python
 P = simulator_core.get_P_whole_p(sim_data, map_data, car_types, pollutants, G_numpy_para_C)
 ```
+
+## Licencias 
+Este repositorio contiene código fuente, datos de prueba asociados al código y documentación académica derivados de un Trabajo Fin de Grado realizado en la Universidad de Sevilla en el marco del proyecto de investigación SAINEVRA. 
+
+Salvo indicación expresa en contrario: 
+- El código fuente, scripts, y tests asociados al código se distribuyen bajo la **Apache License 2.0**. Véase el archivo `LICENSE` y `LICENSES/Apache-2.0.txt`. 
+- La memoria del TFG en PDF se distribuyen bajo la licencia **Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International (CC BY-NC-ND 4.0)**. Véase `LICENSES/CC-BY-NC-ND-4.0.txt`. 
+
+La reutilización del código debe citar adecuadamente este repositorio, el TFG y el proyecto de investigación asociado. Véase `CITATION.cff`.

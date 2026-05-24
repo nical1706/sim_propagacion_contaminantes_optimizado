@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+title: "Aceleración de código de simulación de difusión de contaminantes mediante optimizaciones y paralelización en CPU"
+message: "Si utiliza este software o la documentación asociada, cite este trabajo."
+type: software
+authors:
+  - family-names: "García Niebla"
+    given-names: "Nicolás"
+    affiliation: "Universidad de Sevilla"
+  - family-names: "Navas Orozco"
+    given-names: "Antonio"
+    affiliation: "Universidad de Sevilla"
+  - family-names: "Guisado Lizar"
+    given-names: "José Luis"
+    affiliation: "Universidad de Sevilla"
+date-released: "2026-06-01" 
+license: "Apache-2.0"
+repository-code: "https://github.com/tu-usuario/nombre-del-repositorio"
